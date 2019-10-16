@@ -6,7 +6,7 @@
   :license  "Specify license here"
   :version "0.0.1"
   :serial t
-  :depends-on (:vgplot :rtg-math :iterate)
+  :depends-on (:vgplot :3d-vectors :iterate)
   :components ((:file "package")
   			   (:file "rad")
 			   (:file "rocket-to-moon")
