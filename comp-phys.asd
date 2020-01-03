@@ -10,4 +10,6 @@
   :components ((:file "package")
   			   (:file "rad")
 			   (:file "rocket-to-moon")
-               (:file "comp-phys")))
+			   (:file "extension")
+               (:file "comp-phys")
+			   ))
