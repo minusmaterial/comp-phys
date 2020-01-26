@@ -117,14 +117,16 @@
     (pos (vec 0 0 0) :type vec3 )
     (v (vec 0 0 0) :type vec3 )
     (mass 0d0 :type long-float)
-    (name "" :type string))
+    (name "" :type string)
+    (grav-significant T :type boolean))
 
 (defun make-body (pos v mass 
-                  &optional (name (write-to-string (random 999999))))
+                  &optional (name (write-to-string (random 999999)))
+                            (grav-significant T))
     (setf mass (coerce mass 'double-float))
     (setf pos (vec (vx pos) (vy pos) (vz pos)))
     (setf v (vec (vx v) (vy v) (vz v)))
-    (%make-body :pos pos :v v :mass mass :name name)
+    (%make-body :pos pos :v v :mass mass :name name :grav-significant grav-significant)
     )
 
 (defparameter *rocket* (make-body 
@@ -641,3 +643,16 @@
     (- guess
        (/ (funcall func guess)
           (funcall deriv guess))))
+
+(defun nr-approx (func deriv guess)
+    (let ((next-guess (nr-next func deriv guess)))
+        (do ()
+            ((< (abs (/ (- guess next-guess) 
+                        next-guess))
+                0.01))
+            (setf guess next-guess)
+            (setf next-guess (nr-next func deriv guess)))
+        next-guess))
+
+(defparameter *lagrangedist* 
+  (nr-approx #'diff #'d-diff 1))
