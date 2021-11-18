@@ -1,5 +1,9 @@
 (in-package #:comp-phys)
 
+
+(defparameter *au* 149597870700)
+(defparameter *au-d-to-m-s* (/ 149597870700 (days 1)))
+
 (defstruct (swpvec
              (:constructor %make-swpvec)
              (:copier %copy-swpvec))
@@ -159,43 +163,70 @@
                  *celestials-initial*))
 
 (defparameter *earth* 
-  (make-body (VEC3 *orb-rad-earth* 0.0d0 0.0d0)
-                   (VEC3 0 0 0)
-                   *mass-earth*
-                   "Earth"))
+  (make-body (v* (VEC3 -1.756637922977122d-01 
+                       9.659912850526895d-01 
+                       2.020629118443605d-04)
+                 *au*)
+             
+             (v* (VEC3  -1.722857156974862d-02 
+                        -3.015071224668472d-03 
+                        -5.859931223618532d-08)
+                 *au-d-to-m-s*)
+
+             *mass-earth*
+             "Earth"))
+
+(defparameter *moon*
+  (make-body (v* (vec3  -1.777871530146587d-01
+                        9.643743958957228d-01 
+                        4.464235023469453d-04
+
+                       )
+                       *au*)
+             (v* (vec3 -1.690468993933486d-02 
+                       -3.477070764654480d-03 
+                       -1.005392350233675d-06
+                       )
+                       *au-d-to-m-s*)
+                   *mass-moon*
+                   "Moon"
+                   ))
+
+
+
 
 (defparameter *mass-sun* 1.9885d30)
+
 (defparameter *mass-jupiter* 1.8982d27)
 
 (defparameter *dead-inital*
     (vector 
         *earth*
-        (make-body (VEC3 (* -1 *orb-rad-moon*) 0.0d0 0.0d0)
-                   (VEC3 0 500 0)
-                   *mass-moon*
-                   "Moon"
-                   )
-       ; (make-body (VEC3 149.6d9 0.0d0 0.0d0)
-       ;            (VEC3 0 30000 0)
-       ;            *mass-sun*
-       ;            "Sun")
-       ; (make-body (vec3 (+ 149.6d9 778.57d9) 0 0)
-       ;            (vec3 0 0 0)
-       ;            *mass-jupiter*
-       ;            "Jupiter")
+       *moon* 
+        
+        ;(make-body (vec3 (/ (+ 149.6d9 778.57d9) 10) 0 0)
+                   ;(vec3 0 -14000 0)
+                   ;(* 1000 *mass-jupiter*)
+                   ;"Jupiter")
         (make-body
-                   (VEC3 (* -1 (+ *orb-rad-moon* *lagrangedist*)) 0.0d0 0.0d0)
-                   (vec 0 (* 1022
-                             (/ (+ *orb-rad-moon* *lagrangedist*)
-                                *orb-rad-moon*))  
-                        0)
+                   (v+ (body-pos *earth*) (vec 200000 0 0))
+                   (vec 200 0 0)
                    0
                    "Small rock"
-                   nil)))
+                   nil)
+        ;(make-body (v* (VEC3 0 0.0d0 0.0d0) *au*)
+                   ;(VEC3 0 0 0)
+                   ;*mass-sun*
+                   ;"Sun")
+        
+        )
+    
+    
+    )
 
 (defparameter *dead-sim-init*
-    (make-swpvec *dead-inital*
-                 *dead-inital*))
+    (make-swpvec (shift-to-zero-net-momentum *dead-inital*)
+                 (shift-to-zero-net-momentum *dead-inital*)))
 
 (defun grav-acceleration (from-pos to-bod)
     (declare (optimize (speed 3) (safety 0)))
@@ -342,7 +373,6 @@
       (format t "~A~%" plot-ratio)
       (print (swpvec-current copied-state))
       
-      
       (simulating-n-bodies-while-doing (copied-state duration dt)
           (when (= i (caar plot-coords))
             (let* ((sim-index i)
@@ -358,34 +388,51 @@
                                 (aref (swpvec-current bodies)
                                       body-index))))
                     (setf (aref plot-data (+ 2 (* 3 body-index)) plot-index ) 
-                          (aref timevec plot-index))))))
+                          ;(aref timevec plot-index)
+                          (vz (body-pos 
+                                (aref (swpvec-current bodies)
+                                      body-index)))
+                          
+                          )))))
       (close-all-plots)
-      (format-plot nil "set zlabel \"Time elapsed (s)\"")
-      (format-plot nil "set view equal xy")
+      ;(format-plot nil "set zlabel \"Time elapsed (s)\"")
+      (format-plot nil "set view equal xyz")
       ;(format-plot nil "set size ratio -1")
       (format-plot nil "set size square")
       (eval `(3d-plot 
               ,@(iter (for body-index in-vector bodies-to-plot)
-                      (collect (make-array n-plot-points
-                                           :displaced-to plot-data 
-                                           :displaced-index-offset (* (+ 0 (* 3 body-index))
-                                                                      n-plot-points)))
-                      (collect (make-array n-plot-points
-                                           :displaced-to plot-data 
-                                           :displaced-index-offset (* (+ 1 (* 3 body-index))
-                                                                      n-plot-points)))
+                      (collect 
+                        (make-array n-plot-points
+                                    :displaced-to plot-data 
+                                    :displaced-index-offset 
+                                    (* (+ 0 (* 3 body-index))
+                                       n-plot-points)))
+                      (collect 
+                        (make-array n-plot-points
+                                    :displaced-to plot-data 
+                                    :displaced-index-offset 
+                                    (* (+ 1 (* 3 body-index))
+                                       n-plot-points)))
                       ;(collect (map (type-of timevec) #'cos timevec))
                       ;(collect (map (type-of timevec) #'sin timevec))
-                      (collect timevec)
-                      (collect (body-name (aref (swpvec-current copied-state) body-index))))))
+                      (collect 
+                        (make-array n-plot-points
+                                    :displaced-to plot-data 
+                                    :displaced-index-offset 
+                                    (* (+ 2 (* 3 body-index))
+                                       n-plot-points)))
+                      ;(collect timevec)
+                      (collect (body-name (aref (swpvec-current copied-state) body-index))))
+
+              ))
       
       ))
 
 (defun run ()
     (sim-while-plotting *dead-sim-init* 
-                        :duration (days 30) 
+                        :duration (days 1) 
                         :n-plot-points 1000
-                        :bodies-to-plot '(0 1 )
+                        ;:bodies-to-plot '(0 1)
 
                         ))
 
